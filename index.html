@@ -15,27 +15,28 @@
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{height:100%;background:#eef2f3;overflow:hidden;
     font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif}
-  #stage{position:relative;width:390px;height:844px;overflow:hidden;transform-origin:0 0}
+  #stage{position:relative;width:100%;height:100vh;height:100dvh;overflow:hidden}
+  html.still #stage{width:390px;height:844px}
   canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
   .grain{position:absolute;inset:0;pointer-events:none;opacity:.16;mix-blend-mode:multiply;
     background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/><feColorMatrix type='saturate' values='0'/></filter><rect width='120' height='120' filter='url(%23n)'/></svg>")}
   .hud{position:absolute;inset:0;pointer-events:none;color:#161c20}
   .brand{position:absolute;left:26px;top:calc(env(safe-area-inset-top,0px) + 26px);
-    font-size:10px;font-weight:600;letter-spacing:.34em;opacity:.78}
+    font-size:clamp(9px,2.6vw,11px);font-weight:600;letter-spacing:.34em;opacity:.78}
   .bat{position:absolute;right:26px;top:calc(env(safe-area-inset-top,0px) + 20px);
     display:flex;flex-direction:column;align-items:center;gap:2px;opacity:.9}
   .bat svg{display:block}
   .bat .pct{font-size:10px;font-variant-numeric:tabular-nums;letter-spacing:.06em;opacity:.75}
   .clock{position:absolute;left:24px;bottom:calc(env(safe-area-inset-bottom,0px) + 74px);
-    color:#fff;font-size:62px;font-weight:200;line-height:.92;letter-spacing:.01em;
+    color:#fff;font-size:clamp(46px,16.5vw,78px);font-weight:200;line-height:.92;letter-spacing:.01em;
     font-variant-numeric:tabular-nums;text-shadow:0 2px 18px rgba(10,14,17,.28)}
   .clock small{font-size:15px;font-weight:300;opacity:.6;margin-left:7px;letter-spacing:.04em}
   .date{position:absolute;left:26px;bottom:calc(env(safe-area-inset-bottom,0px) + 50px);
-    color:#fff;font-size:9.5px;font-weight:500;letter-spacing:.22em;opacity:.72}
+    color:#fff;font-size:clamp(8.5px,2.4vw,10px);font-weight:500;letter-spacing:.22em;opacity:.72}
   .right{position:absolute;right:24px;bottom:calc(env(safe-area-inset-bottom,0px) + 62px);
     text-align:right;color:#fff}
-  .greet{font-size:17px;font-weight:200;line-height:1.24;text-shadow:0 1px 12px rgba(10,14,17,.25)}
-  .wx{margin-top:7px;font-size:10px;font-weight:400;letter-spacing:.04em;opacity:.72;
+  .greet{font-size:clamp(14px,4.4vw,19px);font-weight:200;line-height:1.24;text-shadow:0 1px 12px rgba(10,14,17,.25)}
+  .wx{margin-top:7px;font-size:clamp(9px,2.6vw,11px);font-weight:400;letter-spacing:.04em;opacity:.72;
     font-variant-numeric:tabular-nums}
   .chips{position:absolute;left:26px;bottom:calc(env(safe-area-inset-bottom,0px) + 26px);
     color:#fff;font-size:9px;letter-spacing:.12em;opacity:.4}
@@ -48,7 +49,7 @@
   <div class="hud">
     <div class="brand">WELCOME</div>
     <div class="bat">
-        <svg width="72" height="72" viewBox="0 0 72 72" id="ring">
+        <svg viewBox="0 0 72 72" id="ring" style="width:clamp(52px,15vw,76px);height:auto">
           <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(22,28,32,.14)" stroke-width="6"/>
           <circle id="arc" cx="36" cy="36" r="30" fill="none" stroke="#161c20" stroke-width="6"
                   stroke-linecap="round" transform="rotate(-90 36 36)"
@@ -218,17 +219,17 @@
     return tw;
   }
 
-  const BW = 390, BH = 844, stage = document.getElementById('stage');
+  const stage = document.getElementById('stage');
   const STILL = q.has('still');
+  if (STILL) document.documentElement.classList.add('still');
+  const WQ = parseInt(q.get('w')), HQ = parseInt(q.get('h'));
+  if (WQ && HQ){ stage.style.width = WQ+'px'; stage.style.height = HQ+'px'; }
   function resize(){
     dpr = Math.min(devicePixelRatio||1, 3);
-    W = BW; H = BH;
+    W = (WQ || cv.clientWidth)  || (STILL ? 390 : innerWidth);
+    H = (HQ || cv.clientHeight) || (STILL ? 844 : innerHeight);
     cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
     ctx.setTransform(dpr,0,0,dpr,0,0);
-    if (!STILL){
-      const fit = Math.min(innerWidth/BW, innerHeight/BH);
-      stage.style.transform = `translate(${(innerWidth-BW*fit)/2}px,${(innerHeight-BH*fit)/2}px) scale(${fit})`;
-    }
   }
 
   // ---- 時間 / 電量 ----
