@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#eef2f3">
+<title>山樣</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<meta name="apple-mobile-web-app-title" content="山樣">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;background:#eef2f3;overflow:hidden;
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif}
+  #stage{position:relative;width:390px;height:844px;overflow:hidden;transform-origin:0 0}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .grain{position:absolute;inset:0;pointer-events:none;opacity:.16;mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/><feColorMatrix type='saturate' values='0'/></filter><rect width='120' height='120' filter='url(%23n)'/></svg>")}
+  .hud{position:absolute;inset:0;pointer-events:none;color:#161c20}
+  .brand{position:absolute;left:26px;top:calc(env(safe-area-inset-top,0px) + 26px);
+    font-size:10px;font-weight:600;letter-spacing:.34em;opacity:.78}
+  .bat{position:absolute;right:26px;top:calc(env(safe-area-inset-top,0px) + 20px);
+    display:flex;flex-direction:column;align-items:center;gap:2px;opacity:.9}
+  .bat svg{display:block}
+  .bat .pct{font-size:10px;font-variant-numeric:tabular-nums;letter-spacing:.06em;opacity:.75}
+  .clock{position:absolute;left:24px;bottom:calc(env(safe-area-inset-bottom,0px) + 74px);
+    color:#fff;font-size:62px;font-weight:200;line-height:.92;letter-spacing:.01em;
+    font-variant-numeric:tabular-nums;text-shadow:0 2px 18px rgba(10,14,17,.28)}
+  .clock small{font-size:15px;font-weight:300;opacity:.6;margin-left:7px;letter-spacing:.04em}
+  .date{position:absolute;left:26px;bottom:calc(env(safe-area-inset-bottom,0px) + 50px);
+    color:#fff;font-size:9.5px;font-weight:500;letter-spacing:.22em;opacity:.72}
+  .right{position:absolute;right:24px;bottom:calc(env(safe-area-inset-bottom,0px) + 62px);
+    text-align:right;color:#fff}
+  .greet{font-size:17px;font-weight:200;line-height:1.24;text-shadow:0 1px 12px rgba(10,14,17,.25)}
+  .wx{margin-top:7px;font-size:10px;font-weight:400;letter-spacing:.04em;opacity:.72;
+    font-variant-numeric:tabular-nums}
+  .chips{position:absolute;left:26px;bottom:calc(env(safe-area-inset-bottom,0px) + 26px);
+    color:#fff;font-size:9px;letter-spacing:.12em;opacity:.4}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c"></canvas>
+  <div class="grain"></div>
+  <div class="hud">
+    <div class="brand">WELCOME</div>
+    <div class="bat">
+        <svg width="72" height="72" viewBox="0 0 72 72" id="ring">
+          <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(22,28,32,.14)" stroke-width="6"/>
+          <circle id="arc" cx="36" cy="36" r="30" fill="none" stroke="#161c20" stroke-width="6"
+                  stroke-linecap="round" transform="rotate(-90 36 36)"
+                  stroke-dasharray="188.5" stroke-dashoffset="58"/>
+        </svg>
+      <div class="pct" id="pct">69</div>
+    </div>
+    <div class="clock" id="clock">10:24<small id="sec">36</small></div>
+    <div class="date" id="date">SUN · 6 NOV</div>
+    <div class="right">
+      <div class="greet" id="greet">Good<br>Afternoon</div>
+      <div class="wx" id="wx">18°&nbsp;&nbsp;Light rain</div>
+    </div>
+    <div class="chips"><span id="wind">WIND 8 mph</span></div>
+  </div>
+</div>
+<script>
+(function(){
+  const q = new URLSearchParams(location.search);
+  const FREEZE = q.has('t') ? parseFloat(q.get('t')) : null;
+
+  const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+  let W = 0, H = 0, dpr = 1;
+
+  const SKY_T = [243,246,247], SKY_B = [203,214,219];
+  const COLS = [[186,197,203],[150,162,170],[98,110,118],[33,39,44]];
+
+  // 固定構圖（比隨機穩定）
+  const LAYERS = [
+    {y:.44, amp:.10, peaks:[[.14,.30,.95],[.55,.22,.85],[.86,.17,.55]], rough:.010},
+    {y:.55, amp:.13, peaks:[[.30,.17,1.0],[.68,.13,.90],[.93,.09,.50]], rough:.012},
+    {y:.66, amp:.17, peaks:[[.63,.15,1.0],[.23,.20,.70]], rough:.014},
+    {y:.81, amp:.14, peaks:[[.42,.26,.95],[.86,.12,.60]], rough:.012}
+  ];
+
+  function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+  function makeNoise(seed, n){
+    const r = mulberry32(seed), a = [];
+    for (let i=0;i<n;i++) a.push(r()*2-1);
+    const out = [], k = 7;
+    for (let i=0;i<n;i++){
+      let s=0,c=0;
+      for (let j=-k;j<=k;j++){ s += a[Math.min(n-1,Math.max(0,i+j))]; c++; }
+      out.push(s/c);
+    }
+    return out;
+  }
+
+  function ridgeLine(L, i, t){
+    const N = 220, noise = NOISE[i], pts = [];
+    const raw = new Array(N).fill(0);
+    for (let k=0;k<N;k++){
+      const x = k/(N-1);
+      let h = 0;
+      for (const [cx,s,a] of L.peaks) h += a * Math.exp(-Math.pow(Math.abs(x-cx)/s, 1.7));
+      raw[k] = h;
+    }
+    const mx = Math.max(...raw) || 1;
+    const dx = (0.0015 + 0.0028*i) * Math.sin(2*Math.PI*t + i*0.9);
+    for (let k=0;k<N;k++){
+      const x = k/(N-1);
+      const y = H*L.y - H*L.amp*(raw[k]/mx + L.rough*noise[k]*6);
+      pts.push([ (x+dx)*W, y ]);
+    }
+    return pts;
+  }
+
+  const NOISE = LAYERS.map((_,i)=>makeNoise(101+i*13, 220));
+
+  function fillBelow(pts, col, alpha){
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.lineTo(W*1.08, H); ctx.lineTo(-W*0.08, H); ctx.closePath();
+    ctx.fillStyle = `rgba(${col[0]},${col[1]},${col[2]},${alpha})`;
+    ctx.fill();
+  }
+
+  function sky(t){
+    const g = ctx.createLinearGradient(0,0,0,H*0.9);
+    g.addColorStop(0, `rgb(${SKY_T})`);
+    g.addColorStop(1, `rgb(${SKY_B})`);
+    ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+    // 太陽光暈
+    const cx = W*0.30, cy = H*0.16, r = Math.min(W,H)*0.30;
+    const pulse = 0.80 + 0.35*Math.sin(2*Math.PI*t);
+    const rg = ctx.createRadialGradient(cx,cy,0,cx,cy,r*2.4);
+    rg.addColorStop(0, `rgba(255,252,240,${0.55*pulse})`);
+    rg.addColorStop(0.35, `rgba(255,251,238,${0.22*pulse})`);
+    rg.addColorStop(1, 'rgba(255,250,240,0)');
+    ctx.fillStyle = rg; ctx.fillRect(0,0,W,H);
+    ctx.beginPath(); ctx.arc(cx,cy,r*0.52,0,7);
+    ctx.strokeStyle = `rgba(255,253,246,${0.55*pulse})`; ctx.lineWidth = Math.max(1.5, W*0.0045); ctx.stroke();
+  }
+
+  function fogBand(t, i){
+    const base = H*(LAYERS[i+1].y - 0.02) + H*0.018*Math.sin(2*Math.PI*t + i*1.7);
+    const g = ctx.createLinearGradient(0, base - H*0.10, 0, base + H*0.10);
+    g.addColorStop(0, 'rgba(255,255,255,0)');
+    g.addColorStop(0.55, 'rgba(255,255,255,0.62)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, base - H*0.10, W, H*0.20);
+  }
+
+  // ---- 風力發電機 ----
+  function yOnLayer(i, xN, t){
+    const L = LAYERS[i], N = 220;
+    const raw = new Array(N).fill(0);
+    for (let k=0;k<N;k++){
+      const x = k/(N-1); let h = 0;
+      for (const [cx,s,a] of L.peaks) h += a*Math.exp(-Math.pow(Math.abs(x-cx)/s,1.7));
+      raw[k] = h;
+    }
+    const mx = Math.max(...raw)||1;
+    const k = Math.max(0, Math.min(N-1, Math.round(xN*(N-1))));
+    return H*L.y - H*L.amp*(raw[k]/mx + L.rough*NOISE[i][k]*6);
+  }
+
+  function turbine(t){
+    const xN = 0.165, i = 2;
+    const y0 = yOnLayer(i, xN, t);
+    const x = xN*W;
+    const towerH = H*0.235, tw0 = W*0.012, tw1 = W*0.008;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(24,30,35,.92)'; ctx.fillStyle = 'rgba(24,30,35,.92)';
+    // 塔身
+    ctx.beginPath();
+    ctx.moveTo(x-tw0, y0); ctx.lineTo(x+tw0, y0);
+    ctx.lineTo(x+tw1, y0-towerH); ctx.lineTo(x-tw1, y0-towerH); ctx.closePath();
+    ctx.fill();
+    // 機艙
+    const ny = y0 - towerH;
+    ctx.beginPath(); ctx.ellipse(x+W*0.004, ny, W*0.022, W*0.011, 0, 0, 7); ctx.fill();
+    // 葉片
+    const wind = 0.55 + 0.45*Math.sin(2*Math.PI*t*1.0);
+    const ang = 2*Math.PI*(t*2.4 + 0.1);
+    const R = Math.min(W,H)*0.135;
+    ctx.translate(x+W*0.004, ny);
+    for (let b=0;b<3;b++){
+      ctx.save(); ctx.rotate(ang + b*2*Math.PI/3);
+      ctx.beginPath();
+      ctx.moveTo(0,-W*0.005);
+      ctx.quadraticCurveTo(R*0.42, -R*0.13, R, -W*0.004);
+      ctx.quadraticCurveTo(R*0.45, R*0.02, 0, W*0.005);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+    ctx.beginPath(); ctx.arc(0,0,W*0.010,0,7); ctx.fill();
+    ctx.restore();
+    return {wind: 4 + 6*wind, rpm: 8 + 14*wind};
+  }
+
+  function draw(t){
+    sky(t);
+    let tw = null;
+    for (let i=0;i<LAYERS.length;i++){
+      const pts = ridgeLine(LAYERS[i], i, t);
+      fillBelow(pts, COLS[i], 1);
+      if (i === 1) tw = turbine(t);   // 風車站在第二層稜線上
+      if (i < LAYERS.length-1) fogBand(t, i);
+    }
+    if (tw){
+      const el = document.getElementById('wind');
+      if (el) el.textContent = 'WIND ' + tw.wind.toFixed(0) + ' mph';
+    }
+    return tw;
+  }
+
+  const BW = 390, BH = 844, stage = document.getElementById('stage');
+  const STILL = q.has('still');
+  function resize(){
+    dpr = Math.min(devicePixelRatio||1, 3);
+    W = BW; H = BH;
+    cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    if (!STILL){
+      const fit = Math.min(innerWidth/BW, innerHeight/BH);
+      stage.style.transform = `translate(${(innerWidth-BW*fit)/2}px,${(innerHeight-BH*fit)/2}px) scale(${fit})`;
+    }
+  }
+
+  // ---- 時間 / 電量 ----
+  const pctEl = document.getElementById('pct'), arc = document.getElementById('arc');
+  const clockEl = document.getElementById('clock'), secEl = document.getElementById('sec');
+  const dateEl = document.getElementById('date'), greetEl = document.getElementById('greet');
+  const DOW = ['SUN','MON','TUE','WED','THU','FRI','SAT'], MON = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const C = 2*Math.PI*30;
+
+  let level = 69;
+  if (FREEZE !== null){
+    setBattery(69);
+  } else if (navigator.getBattery){
+    navigator.getBattery().then(b => {
+      const upd = () => { level = Math.round(b.level*100); setBattery(level); };
+      upd(); b.addEventListener('levelchange', upd);
+      b.addEventListener('chargingchange', upd);
+    }).catch(()=>{});
+  }
+  function setBattery(v){
+    pctEl.textContent = v;
+    arc.setAttribute('stroke-dashoffset', (C*(1-v/100)).toFixed(1));
+  }
+
+  function tick(){
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    clockEl.firstChild.nodeValue = hh + ':' + mm;
+    secEl.textContent = String(d.getSeconds()).padStart(2,'0');
+    dateEl.textContent = DOW[d.getDay()] + ' · ' + d.getDate() + ' ' + MON[d.getMonth()];
+    const h = d.getHours();
+    greetEl.innerHTML = (h < 12 ? 'Good<br>Morning' : h < 18 ? 'Good<br>Afternoon' : 'Good<br>Evening');
+  }
+
+  resize(); tick(); setBattery(level);
+  addEventListener('resize', () => { resize(); if (FREEZE===null) draw(phase()); else draw(FREEZE); });
+  setInterval(tick, 1000);
+
+  const PERIOD = 14000; // 一圈 14 秒
+  function phase(){ return (performance.now() % PERIOD) / PERIOD; }
+
+  function loop(){
+    draw(FREEZE===null ? phase() : FREEZE);
+    // 緩慢的電量呼吸（沒有 Battery API 時的示範值）
+    if (!navigator.getBattery && FREEZE === null){
+      const v = Math.round(66 + 3.4*(0.5+0.5*Math.sin(2*Math.PI*phase())));
+      if (v !== level){ level = v; setBattery(v); }
+    }
+    requestAnimationFrame(loop);
+  }
+  loop();
+
+  // 離線快取
+  if ('serviceWorker' in navigator) {
+    addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+  }
+})();
+</script>
+</body>
+</html>
