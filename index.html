@@ -80,6 +80,10 @@
     flex:0 0 auto;transform:translateY(-1px)}
   .ag-sep{height:1px;background:rgba(255,255,255,.22);margin:8px 0 6px}
   .ag-more{font-size:clamp(9px,2.4vw,10px);opacity:.55;margin-top:4px;letter-spacing:.04em}
+  .gear{position:absolute;right:24px;top:calc(env(safe-area-inset-top,0px) + 44px);
+    width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:12px;color:#161c20;opacity:.35;background:rgba(255,255,255,.28);
+    border:.5px solid rgba(22,28,32,.18);pointer-events:auto}
   .city{position:absolute;left:26px;top:calc(env(safe-area-inset-top,0px) + 34px);
     font-size:clamp(9px,2.5vw,11px);letter-spacing:.06em;opacity:.55;color:#161c20}
   .clock{position:absolute;left:24px;bottom:calc(env(safe-area-inset-bottom,0px) + 78px);
@@ -105,6 +109,36 @@
   .nowp .eq span:nth-child(3){height:7px;animation-delay:.3s}
   .nowp.paused .eq span{animation-play-state:paused;opacity:.45}
   @keyframes eq{0%,100%{transform:scaleY(.5)}50%{transform:scaleY(1.25)}}
+
+  /* ===== 排版編輯 ===== */
+  .editing .brand,.editing .city,.editing .bat,.editing .clock,.editing .date,
+  .editing .right,.editing .agenda,.editing .nowp{
+    outline:1px dashed rgba(255,255,255,.55);outline-offset:6px;border-radius:6px;
+    touch-action:none;cursor:grab}
+  .editing .agenda{outline-color:rgba(255,255,255,.45)}
+  .edit-hint{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 96px);
+    transform:translateX(-50%);padding:5px 12px;border-radius:999px;
+    background:rgba(14,20,24,.45);color:#fff;font-size:11px;letter-spacing:.08em;
+    opacity:0;transition:opacity .35s;pointer-events:none}
+  .edit-hint.show{opacity:.9}
+  .sheet{position:absolute;left:0;right:0;bottom:0;z-index:20;
+    background:rgba(16,22,26,.82);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);
+    color:#fff;border-radius:22px 22px 0 0;padding:14px 18px calc(env(safe-area-inset-bottom,0px) + 18px);
+    transform:translateY(105%);transition:transform .38s cubic-bezier(.22,.61,.36,1);
+    max-height:78%;overflow:auto;pointer-events:auto}
+  .sheet.open{transform:none}
+  html.still .sheet{transition:none}
+  .sh-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .sh-t{font-size:13px;letter-spacing:.12em;opacity:.8}
+  .sh-done{font-size:13px;padding:6px 14px;border-radius:999px;background:rgba(255,255,255,.16);
+    border:1px solid rgba(255,255,255,.22)}
+  .sh-sec{font-size:10px;letter-spacing:.2em;opacity:.45;margin:14px 0 6px}
+  .sh-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .sh-btn{font-size:12.5px;padding:10px 12px;border-radius:12px;text-align:center;
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);opacity:.55}
+  .sh-btn.on{opacity:1;background:rgba(127,179,168,.28);border-color:rgba(127,179,168,.65)}
+  .sh-row{display:flex;gap:8px;margin-top:8px}
+  .sh-row .sh-btn{flex:1}
 </style>
 </head>
 <body>
@@ -113,6 +147,7 @@
   <div class="grain"></div>
   <div class="hud">
     <div class="brand">WELCOME</div>
+    <div class="gear" id="gear">✳︎</div>
     <div class="city" id="city"></div>
     <div class="bat">
       <div class="pct" id="pct">69%</div>
@@ -136,7 +171,33 @@
     </div>
     <div class="nowp" id="nowp"></div>
   </div>
-</div>
+
+  <div class="edit-hint" id="hint">長按畫面可編輯排版</div>
+  <div class="sheet" id="sheet">
+    <div class="sh-h"><span class="sh-t">排版</span><span class="sh-done" id="done">完成</span></div>
+    <div class="sh-sec">尺寸</div>
+    <div class="sh-row">
+      <div class="sh-btn" data-fam="S">小</div>
+      <div class="sh-btn" data-fam="M">中</div>
+      <div class="sh-btn" data-fam="L">大</div>
+    </div>
+    <div class="sh-sec">顯示元件</div>
+    <div class="sh-grid" id="toggles"></div>
+    <div class="sh-sec">時鐘</div>
+    <div class="sh-row">
+      <div class="sh-btn" data-clock="left">靠左</div>
+      <div class="sh-btn" data-clock="right">靠右</div>
+    </div>
+    <div class="sh-row">
+      <div class="sh-btn" data-size="0.82">小</div>
+      <div class="sh-btn" data-size="1">中</div>
+      <div class="sh-btn" data-size="1.24">大</div>
+    </div>
+    <div class="sh-sec">拖曳元件可自由移動位置</div>
+    <div class="sh-row"><div class="sh-btn" id="reset">恢復預設</div></div>
+  </div>
+
+  </div>
 <script>
 (function(){
   const q = new URLSearchParams(location.search);
@@ -338,7 +399,8 @@
     if ((d.counts?.events || 0) > ev.length) more.push('還有 ' + (d.counts.events - ev.length) + ' 個行程');
     if ((d.counts?.todos || 0) > td.length) more.push('待辦 ' + d.counts.todos + ' 件');
     agCount.textContent = more.join(' · ');
-    agEl.classList.add('show');
+    agEl.dataset.has = '1';
+    if (L.agenda) { agEl.classList.add('show'); } else { agEl.classList.remove('show'); }
   }
 
   // ---- 天氣 ----
@@ -392,6 +454,174 @@
     requestAnimationFrame(loop);
   }
   loop();
+
+
+  // ================= 排版：尺寸預設 + 元件開關 + 拖曳 =================
+  const LKEY = 'shanyang.layout.v1';
+  const PRESET = {
+    S: {size:'S', city:0, greet:0, wx:1, agenda:0, music:0, sec:0, battery:1, clockPos:'left', clockScale:1.26},
+    M: {size:'M', city:1, greet:1, wx:1, agenda:0, music:1, sec:1, battery:1, clockPos:'left', clockScale:1},
+    L: {size:'L', city:1, greet:1, wx:1, agenda:1, music:1, sec:1, battery:1, clockPos:'left', clockScale:0.92}
+  };
+  const TOGGLES = [
+    ['city','城市'], ['greet','問候'], ['wx','天氣'], ['agenda','行事曆/待辦'],
+    ['music','音樂'], ['battery','電量'], ['sec','秒數']
+  ];
+  let L = Object.assign({}, PRESET.L, { pos:{} });
+  try { const raw = localStorage.getItem(LKEY); if (raw) L = Object.assign(L, JSON.parse(raw)); } catch(e){}
+  if (!PRESET[L.size]) L = Object.assign({}, PRESET.L, { pos: {} });
+
+  const stageEl = document.getElementById('stage');
+  const elMap = {
+    city: document.getElementById('city'),
+    greet: document.getElementById('greet'),
+    wx: document.getElementById('wx'),
+    agenda: document.getElementById('agenda'),
+    music: document.getElementById('nowp'),
+    battery: document.querySelector('.bat'),
+    sec: document.getElementById('sec'),
+    brand: document.querySelector('.brand'),
+    clock: document.getElementById('clock'),
+    date: document.getElementById('date')
+  };
+
+  function save(){ try { localStorage.setItem(LKEY, JSON.stringify(L)); } catch(e){} }
+
+  function applyLayout(){
+    document.body.dataset.size = L.size;
+    elMap.city.style.display = L.city ? '' : 'none';
+    elMap.greet.style.display = L.greet ? '' : 'none';
+    elMap.wx.style.display = L.wx ? '' : 'none';
+    elMap.wx.style.marginTop = L.greet ? '' : '0';
+    document.querySelector('.right').style.display = (L.greet || L.wx) ? '' : 'none';
+    elMap.music.style.display = L.music ? '' : 'none';
+    elMap.battery.style.display = L.battery ? '' : 'none';
+    elMap.sec.style.display = L.sec ? '' : 'none';
+    if (!L.agenda) agEl.classList.remove('show');
+    else if (agEl.dataset.has === '1') agEl.classList.add('show');
+
+    const clock = elMap.clock, date = elMap.date;
+    const base = 'clamp(46px,16.5vw,78px)';
+    clock.style.fontSize = `calc(${base} * ${L.clockScale})`;
+    const isRight = L.clockPos === 'right';
+    clock.style.left = isRight ? 'auto' : '24px';
+    clock.style.right = isRight ? '24px' : 'auto';
+    clock.style.textAlign = isRight ? 'right' : 'left';
+    date.style.left = isRight ? 'auto' : '26px';
+    date.style.right = isRight ? '26px' : 'auto';
+    date.style.textAlign = isRight ? 'right' : 'left';
+
+    // 自訂拖曳位置
+    for (const key in L.pos){
+      const el = document.querySelector('[data-k="' + key + '"]') || elMap[key];
+      if (!el) continue;
+      const p = L.pos[key];
+      el.style.left = p.l + '%'; el.style.top = p.t + '%';
+      el.style.right = 'auto'; el.style.bottom = 'auto';
+    }
+    syncSheet();
+  }
+
+  // ---- 編輯面板 ----
+  const sheet = document.getElementById('sheet');
+  const togglesEl = document.getElementById('toggles');
+  let editing = false;
+
+  togglesEl.innerHTML = TOGGLES.map(([k,n]) =>
+    `<div class="sh-btn" data-t="${k}">${n}</div>`).join('');
+
+  function syncSheet(){
+    [...togglesEl.children].forEach(b => b.classList.toggle('on', !!L[b.dataset.t]));
+    document.querySelectorAll('[data-clock]').forEach(b => b.classList.toggle('on', L.clockPos === b.dataset.clock));
+    document.querySelectorAll('[data-size]').forEach(b => b.classList.toggle('on', Math.abs(parseFloat(b.dataset.size) - L.clockScale) < 0.01));
+    document.querySelectorAll('[data-fam]').forEach(b => b.classList.toggle('on', L.size === b.dataset.fam));
+  }
+
+  togglesEl.addEventListener('click', e => {
+    const b = e.target.closest('[data-t]'); if (!b) return;
+    L[b.dataset.t] = L[b.dataset.t] ? 0 : 1;
+    if (b.dataset.t === 'agenda') agEl.dataset.has === '1' && agEl.classList.toggle('show', !!L.agenda);
+    save(); applyLayout();
+  });
+  document.querySelectorAll('[data-clock]').forEach(b => b.onclick = () => {
+    L.clockPos = b.dataset.clock; L.pos.clock = null; delete L.pos.clock; L.pos.date = null; delete L.pos.date;
+    save(); applyLayout(); resetPos('clock'); resetPos('date');
+  });
+  document.querySelectorAll('[data-size]').forEach(b => b.onclick = () => {
+    L.clockScale = parseFloat(b.dataset.size); save(); applyLayout();
+  });
+  document.querySelectorAll('[data-fam]').forEach(b => b.onclick = () => {
+    L = Object.assign({}, PRESET[b.dataset.fam], { pos: {} });
+    document.querySelectorAll('[data-k]').forEach(el => { el.style.left=''; el.style.top=''; el.style.right=''; el.style.bottom=''; });
+    save(); applyLayout();
+  });
+  document.getElementById('reset').onclick = () => {
+    L = Object.assign({}, PRESET.L, { pos: {} });
+    document.querySelectorAll('[data-k]').forEach(el => { el.style.left=''; el.style.top=''; el.style.right=''; el.style.bottom=''; });
+    save(); applyLayout();
+  };
+  function resetPos(key){
+    const el = document.querySelector('[data-k="' + key + '"]');
+    if (el) { el.style.left=''; el.style.top=''; el.style.right=''; el.style.bottom=''; }
+    delete L.pos[key]; save();
+  }
+
+  function openSheet(){ editing = true; document.body.classList.add('editing'); sheet.classList.add('open'); }
+  function closeSheet(){ editing = false; document.body.classList.remove('editing'); sheet.classList.remove('open'); }
+  document.getElementById('done').onclick = closeSheet;
+
+  // 長按進入編輯
+  let pressTimer = null;
+  const bootAt = performance.now();
+  document.getElementById('gear').addEventListener('click', e => { e.stopPropagation(); openSheet(); });
+  stageEl.addEventListener('pointerdown', e => {
+    if (editing || e.target.closest('.sheet')) return;
+    if (performance.now() - bootAt < 1500) return;
+    pressTimer = setTimeout(() => { openSheet(); if (navigator.vibrate) navigator.vibrate(8); }, 520);
+  }, {passive:true});
+  ['pointerup','pointercancel','pointermove'].forEach(t =>
+    stageEl.addEventListener(t, () => clearTimeout(pressTimer), {passive:true}));
+
+  // 拖曳
+  ['brand','city','battery','clock','date','greet','agenda','music'].forEach(k => {
+    const el = elMap[k]; if (!el) return;
+    el.setAttribute('data-k', k);
+    el.style.touchAction = 'none';
+    let sx=0, sy=0, ox=0, oy=0, dragging=false;
+    el.addEventListener('pointerdown', e => {
+      if (!editing) return;
+      e.preventDefault(); e.stopPropagation();
+      el.setPointerCapture(e.pointerId);
+      const r = el.getBoundingClientRect(), sr = stageEl.getBoundingClientRect();
+      ox = r.left - sr.left; oy = r.top - sr.top;
+      sx = e.clientX; sy = e.clientY; dragging = true;
+      el.style.right='auto'; el.style.bottom='auto'; el.style.left = ox+'px'; el.style.top = oy+'px';
+    });
+    el.addEventListener('pointermove', e => {
+      if (!dragging) return;
+      const sr = stageEl.getBoundingClientRect();
+      const nx = Math.max(-20, Math.min(sr.width - 40, ox + e.clientX - sx));
+      const ny = Math.max(0, Math.min(sr.height - 30, oy + e.clientY - sy));
+      el.style.left = nx+'px'; el.style.top = ny+'px';
+    });
+    el.addEventListener('pointerup', e => {
+      if (!dragging) return; dragging = false;
+      const sr = stageEl.getBoundingClientRect();
+      const r = el.getBoundingClientRect();
+      L.pos[k] = { l: +(((r.left - sr.left) / sr.width) * 100).toFixed(2),
+                   t: +(((r.top - sr.top) / sr.height) * 100).toFixed(2) };
+      save();
+    });
+  });
+
+  if (q.has('fam') && PRESET[q.get('fam')]) L = Object.assign({}, PRESET[q.get('fam')], {pos:{}});
+  applyLayout();
+  if (q.has('edit')) setTimeout(openSheet, 120);
+  if (!localStorage.getItem(LKEY)){
+    const hint = document.getElementById('hint');
+    setTimeout(() => hint.classList.add('show'), 900);
+    setTimeout(() => hint.classList.remove('show'), 5200);
+  }
 
   // 1.5 秒內沒收到原生資料 → 顯示示範值（網頁版用）
   setTimeout(() => {
