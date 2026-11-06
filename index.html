@@ -40,10 +40,48 @@
   .hud{position:absolute;inset:0;pointer-events:none;color:#161c20}
   .brand{position:absolute;left:26px;top:calc(env(safe-area-inset-top,0px) + 18px);
     font-size:clamp(9px,2.6vw,11px);font-weight:600;letter-spacing:.34em;opacity:.78}
-  .bat{position:absolute;right:26px;top:calc(env(safe-area-inset-top,0px) + 12px);
-    display:flex;flex-direction:column;align-items:center;gap:2px;opacity:.9}
-  .bat svg{display:block}
-  .bat .pct{font-size:10px;font-variant-numeric:tabular-nums;letter-spacing:.06em;opacity:.75}
+  .bat{position:absolute;right:24px;top:calc(env(safe-area-inset-top,0px) + 14px);
+    display:flex;align-items:center;gap:7px}
+  .bat .pct{font-size:clamp(9px,2.5vw,11px);font-variant-numeric:tabular-nums;
+    letter-spacing:.04em;opacity:.8;color:#161c20}
+  .cell{position:relative;width:clamp(54px,16vw,72px);height:clamp(20px,5.6vw,26px);
+    border:1.6px solid rgba(22,28,32,.55);border-radius:7px;overflow:hidden;
+    background:rgba(255,255,255,.18)}
+  .cell::after{content:"";position:absolute;right:-5px;top:50%;transform:translateY(-50%);
+    width:3px;height:38%;background:rgba(22,28,32,.55);border-radius:0 2px 2px 0}
+  .cell .fill{position:absolute;inset:2px auto 2px 2px;width:0%;border-radius:5px;
+    background:linear-gradient(90deg,#7fb3a8,#3f8f7f);
+    transition:width .9s cubic-bezier(.22,.61,.36,1)}
+  .cell .fill.low{background:linear-gradient(90deg,#e0a06a,#c9713c)}
+  .cell .glare{position:absolute;top:0;bottom:0;width:40%;
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);
+    animation:sweep 2.6s ease-in-out infinite}
+  @keyframes sweep{0%{left:-45%}55%{left:105%}100%{left:105%}}
+  .bat .bolt{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    font-size:clamp(11px,3.4vw,14px);color:#0d2b25;opacity:0}
+  .cell.charging .bolt{opacity:1;animation:bolt 1.1s ease-in-out infinite}
+  @keyframes bolt{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.95}
+                  50%{transform:translate(-50%,-50%) scale(1.22);opacity:.55}}
+
+  .agenda{position:absolute;left:20px;right:20px;bottom:calc(env(safe-area-inset-bottom,0px) + 178px);
+    padding:12px 14px;border-radius:18px;color:#fff;
+    background:rgba(14,20,24,.30);border:1px solid rgba(255,255,255,.20);
+    -webkit-backdrop-filter:blur(16px) saturate(1.25);backdrop-filter:blur(16px) saturate(1.25);
+    text-shadow:0 1px 10px rgba(8,12,15,.35);display:none}
+  .agenda.show{display:block}
+  .ag-h{font-size:clamp(8px,2.2vw,9.5px);letter-spacing:.22em;opacity:.62;margin-bottom:8px;
+    display:flex;justify-content:space-between}
+  .ag-row{display:flex;align-items:baseline;gap:9px;padding:3.5px 0;
+    font-size:clamp(11px,3.2vw,13px);font-weight:400}
+  .ag-t{font-variant-numeric:tabular-nums;opacity:.72;font-size:.9em;letter-spacing:.02em;
+    min-width:3.2em}
+  .ag-x{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ag-dot{width:9px;height:9px;border-radius:50%;border:1.4px solid rgba(255,255,255,.75);
+    flex:0 0 auto;transform:translateY(-1px)}
+  .ag-sep{height:1px;background:rgba(255,255,255,.22);margin:8px 0 6px}
+  .ag-more{font-size:clamp(9px,2.4vw,10px);opacity:.55;margin-top:4px;letter-spacing:.04em}
+  .city{position:absolute;left:26px;top:calc(env(safe-area-inset-top,0px) + 34px);
+    font-size:clamp(9px,2.5vw,11px);letter-spacing:.06em;opacity:.55;color:#161c20}
   .clock{position:absolute;left:24px;bottom:calc(env(safe-area-inset-bottom,0px) + 78px);
     color:#fff;font-size:clamp(46px,16.5vw,78px);font-weight:200;line-height:.92;letter-spacing:.01em;
     font-variant-numeric:tabular-nums;text-shadow:0 2px 18px rgba(10,14,17,.28)}
@@ -55,8 +93,18 @@
   .greet{font-size:clamp(14px,4.4vw,19px);font-weight:200;line-height:1.24;text-shadow:0 1px 12px rgba(10,14,17,.25)}
   .wx{margin-top:7px;font-size:clamp(9px,2.6vw,11px);font-weight:400;letter-spacing:.04em;opacity:.72;
     font-variant-numeric:tabular-nums}
-  .chips{position:absolute;left:26px;bottom:calc(env(safe-area-inset-bottom,0px) + 26px);
-    color:#fff;font-size:9px;letter-spacing:.12em;opacity:.4}
+  .nowp{position:absolute;left:26px;right:26px;bottom:calc(env(safe-area-inset-bottom,0px) + 26px);
+    color:#fff;font-size:clamp(9px,2.5vw,10.5px);letter-spacing:.03em;opacity:.62;display:none;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nowp.show{display:block}
+  .nowp .eq{display:inline-block;margin-right:6px;letter-spacing:1px}
+  .nowp .eq span{display:inline-block;width:2px;background:rgba(255,255,255,.85);
+    border-radius:1px;animation:eq .9s ease-in-out infinite}
+  .nowp .eq span:nth-child(1){height:6px;animation-delay:0s}
+  .nowp .eq span:nth-child(2){height:10px;animation-delay:.15s}
+  .nowp .eq span:nth-child(3){height:7px;animation-delay:.3s}
+  .nowp.paused .eq span{animation-play-state:paused;opacity:.45}
+  @keyframes eq{0%,100%{transform:scaleY(.5)}50%{transform:scaleY(1.25)}}
 </style>
 </head>
 <body>
@@ -65,14 +113,20 @@
   <div class="grain"></div>
   <div class="hud">
     <div class="brand">WELCOME</div>
+    <div class="city" id="city"></div>
     <div class="bat">
-        <svg viewBox="0 0 72 72" id="ring" style="width:clamp(52px,15vw,76px);height:auto">
-          <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(22,28,32,.14)" stroke-width="6"/>
-          <circle id="arc" cx="36" cy="36" r="30" fill="none" stroke="#161c20" stroke-width="6"
-                  stroke-linecap="round" transform="rotate(-90 36 36)"
-                  stroke-dasharray="188.5" stroke-dashoffset="58"/>
-        </svg>
-      <div class="pct" id="pct">69</div>
+      <div class="pct" id="pct">69%</div>
+      <div class="cell" id="cell">
+        <div class="fill" id="fill"></div>
+        <div class="glare"></div>
+        <div class="bolt">⚡</div>
+      </div>
+    </div>
+    <div class="agenda" id="agenda">
+      <div class="ag-h"><span>今天</span><span id="ag-count"></span></div>
+      <div id="ag-events"></div>
+      <div class="ag-sep" id="ag-sep"></div>
+      <div id="ag-todos"></div>
     </div>
     <div class="clock" id="clock">10:24<small id="sec">36</small></div>
     <div class="date" id="date">SUN · 6 NOV</div>
@@ -80,7 +134,7 @@
       <div class="greet" id="greet">Good<br>Afternoon</div>
       <div class="wx" id="wx">18°&nbsp;&nbsp;Light rain</div>
     </div>
-    <div class="chips"><span id="wind">WIND 8 mph</span></div>
+    <div class="nowp" id="nowp"></div>
   </div>
 </div>
 <script>
@@ -229,10 +283,6 @@
       if (i === 1) tw = turbine(t);   // 風車站在第二層稜線上
       if (i < LAYERS.length-1) fogBand(t, i);
     }
-    if (tw){
-      const el = document.getElementById('wind');
-      if (el) el.textContent = 'WIND ' + tw.wind.toFixed(0) + ' mph';
-    }
     return tw;
   }
 
@@ -249,33 +299,81 @@
     ctx.setTransform(dpr,0,0,dpr,0,0);
   }
 
-  // ---- 時間 / 電量 ----
-  const pctEl = document.getElementById('pct'), arc = document.getElementById('arc');
+  // ---- 時間 ----
+  const pctEl = document.getElementById('pct');
+  const fillEl = document.getElementById('fill'), cellEl = document.getElementById('cell');
   const clockEl = document.getElementById('clock'), secEl = document.getElementById('sec');
   const dateEl = document.getElementById('date'), greetEl = document.getElementById('greet');
+  const wxEl = document.getElementById('wx'), agEl = document.getElementById('agenda');
+  const agEvents = document.getElementById('ag-events'), agTodos = document.getElementById('ag-todos');
+  const agSep = document.getElementById('ag-sep'), agCount = document.getElementById('ag-count');
   const DOW = ['SUN','MON','TUE','WED','THU','FRI','SAT'], MON = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-  const C = 2*Math.PI*30;
 
+  // ---- 電量（有動畫）----
   let level = 69;
-  if (FREEZE !== null){
-    setBattery(69);
-  } else if (navigator.getBattery){
-    navigator.getBattery().then(b => {
-      const upd = () => { level = Math.round(b.level*100); setBattery(level); };
-      upd(); b.addEventListener('levelchange', upd);
-      b.addEventListener('chargingchange', upd);
-    }).catch(()=>{});
+  function setBattery(v, charging){
+    v = Math.max(0, Math.min(100, Math.round(v)));
+    level = v;
+    pctEl.textContent = v + '%';
+    fillEl.style.width = Math.max(4, v * (100 - 5) / 100) + '%';
+    fillEl.classList.toggle('low', v <= 20);
+    cellEl.classList.toggle('charging', !!charging);
   }
-  function setBattery(v){
-    pctEl.textContent = v;
-    arc.setAttribute('stroke-dashoffset', (C*(1-v/100)).toFixed(1));
+
+  // ---- 行事曆 / 待辦 ----
+  function esc(t){ return String(t).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
+
+  function renderAgenda(d){
+    const ev = (d.events || []).slice(0, 3);
+    const td = (d.todos || []).slice(0, 3);
+    if (!ev.length && !td.length){ agEl.classList.remove('show'); return; }
+    agEvents.innerHTML = ev.map(e =>
+      `<div class="ag-row"><span class="ag-t">${e.allDay ? '全天' : esc(e.t)}</span><span class="ag-x">${esc(e.title)}</span></div>`
+    ).join('');
+    agSep.style.display = (ev.length && td.length) ? 'block' : 'none';
+    agTodos.innerHTML = td.map(t =>
+      `<div class="ag-row"><span class="ag-dot"></span><span class="ag-x">${esc(t.title)}</span></div>`
+    ).join('');
+    const more = [];
+    if ((d.counts?.events || 0) > ev.length) more.push('還有 ' + (d.counts.events - ev.length) + ' 個行程');
+    if ((d.counts?.todos || 0) > td.length) more.push('待辦 ' + d.counts.todos + ' 件');
+    agCount.textContent = more.join(' · ');
+    agEl.classList.add('show');
   }
+
+  // ---- 天氣 ----
+  function renderWeather(w, city){
+    if (!w) return;
+    const t = (w.temp === undefined || w.temp === null) ? '--' : Math.round(w.temp);
+    const d = w.desc || '';
+    wxEl.innerHTML = `${t}°&nbsp;&nbsp;${esc(d)}`;
+    if (city) document.getElementById('city').textContent = city;
+  }
+
+  // ---- 音樂 ----
+  const nowpEl = document.getElementById('nowp');
+  function renderMusic(m){
+    if (!m || !m.title){ nowpEl.classList.remove('show'); return; }
+    const eq = '<span class="eq"><span></span><span></span><span></span></span>';
+    nowpEl.innerHTML = eq + esc(m.title) + (m.artist ? ' — ' + esc(m.artist) : '');
+    nowpEl.classList.toggle('paused', !m.playing);
+    nowpEl.classList.add('show');
+  }
+
+  // ---- 原生橋接（iOS App 會呼叫這個）----
+  let nativeSeen = false;
+  window.applyNative = function(d){
+    nativeSeen = true;
+    if (typeof d.battery === 'number') setBattery(d.battery * 100, d.charging);
+    if (d.weather) renderWeather(d.weather, d.city);
+    else if (d.city) document.getElementById('city').textContent = d.city;
+    renderAgenda(d);
+    if (d.music) renderMusic(d.music);
+  };
 
   function tick(){
     const d = new Date();
-    const hh = String(d.getHours()).padStart(2,'0');
-    const mm = String(d.getMinutes()).padStart(2,'0');
-    clockEl.firstChild.nodeValue = hh + ':' + mm;
+    clockEl.firstChild.nodeValue = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
     secEl.textContent = String(d.getSeconds()).padStart(2,'0');
     dateEl.textContent = DOW[d.getDay()] + ' · ' + d.getDate() + ' ' + MON[d.getMonth()];
     const h = d.getHours();
@@ -286,19 +384,25 @@
   addEventListener('resize', () => { resize(); if (FREEZE===null) draw(phase()); else draw(FREEZE); });
   setInterval(tick, 1000);
 
-  const PERIOD = 14000; // 一圈 14 秒
+  const PERIOD = 14000; // 風車一圈 14 秒
   function phase(){ return (performance.now() % PERIOD) / PERIOD; }
 
   function loop(){
     draw(FREEZE===null ? phase() : FREEZE);
-    // 緩慢的電量呼吸（沒有 Battery API 時的示範值）
-    if (!navigator.getBattery && FREEZE === null){
-      const v = Math.round(66 + 3.4*(0.5+0.5*Math.sin(2*Math.PI*phase())));
-      if (v !== level){ level = v; setBattery(v); }
-    }
     requestAnimationFrame(loop);
   }
   loop();
+
+  // 1.5 秒內沒收到原生資料 → 顯示示範值（網頁版用）
+  setTimeout(() => {
+    if (nativeSeen) return;
+    setBattery(66 + 3.4 * (0.5 + 0.5 * Math.sin(2 * Math.PI * phase())), false);
+    if (q.has('demo')){
+      renderAgenda({ events:[{t:'14:30',title:'與客戶會議'},{t:'16:00',title:'整理報價單'}],
+                     todos:[{title:'寄樣品'},{title:'回覆信件'}], counts:{events:3,todos:5} });
+      renderWeather({temp:24, desc:'多雲'}, '臺北市');
+    }
+  }, 1500);
 
   // 離線快取
   if ('serviceWorker' in navigator) {
